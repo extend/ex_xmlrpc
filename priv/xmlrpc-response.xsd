@@ -1,0 +1,49 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+<xs:element name="methodResponse"><xs:complexType><xs:choice>
+  <xs:element name="params"><xs:complexType><xs:sequence>
+    <xs:element name="param"><xs:complexType><xs:sequence>
+       <xs:element name="value" type="xs:anyType"/>
+    </xs:sequence></xs:complexType></xs:element>
+  </xs:sequence></xs:complexType></xs:element>
+  <xs:element name="fault"><xs:complexType><xs:sequence>
+    <xs:element name="struct" type="struct"/>
+  </xs:sequence></xs:complexType></xs:element>
+</xs:choice></xs:complexType></xs:element>
+<xs:element name="value"><xs:complexType><xs:choice>
+  <xs:group ref="int"/>
+  <xs:element name="boolean"><xs:simpleType>
+    <xs:restriction base="xs:boolean">
+      <xs:pattern value="0|1"/>
+    </xs:restriction>
+  </xs:simpleType></xs:element>
+  <xs:element name="string" type="xs:string"/>
+  <xs:element name="double" type="xs:decimal"/>
+  <xs:element name="dateTime.iso8601"><xs:simpleType>
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]{8}T[0-9]{6}"/>
+    </xs:restriction>
+  </xs:simpleType></xs:element>
+  <xs:element name="base64" type="xs:base64Binary"/>
+  <xs:element name="array"><xs:complexType><xs:sequence>
+      <xs:element name="data"><xs:complexType><xs:sequence>
+        <xs:element ref="value" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence></xs:complexType></xs:element>
+    </xs:sequence></xs:complexType></xs:element>
+  <xs:element name="struct" type="struct"/>
+</xs:choice></xs:complexType></xs:element>
+<xs:complexType name="struct"><xs:sequence>
+  <xs:element name="member" minOccurs="0" maxOccurs="unbounded">
+    <xs:complexType><xs:sequence>
+      <xs:element name="name" type="nonEmptyString"/>
+      <xs:element name="value" type="xs:anyType"/>
+    </xs:sequence></xs:complexType>
+  </xs:element>
+</xs:sequence></xs:complexType>
+<xs:group name="int"><xs:choice>
+  <xs:element name="int" type="xs:int"/>
+  <xs:element name="i4" type="xs:int"/>
+</xs:choice></xs:group>
+<xs:simpleType name="nonEmptyString"><xs:restriction base="xs:string">
+  <xs:minLength value="1"/>
+</xs:restriction></xs:simpleType>
+</xs:schema>
