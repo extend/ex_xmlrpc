@@ -31,6 +31,7 @@
 %% @type array() = [value()].
 %% @type struct() = [{}] | [{name(), value()}].
 %% @type name() = atom() | string() | binary().
+%% @type fault() = {fault, int(), binary()}.
 
 %% @doc The XML-RPC client.
 -module(ex_xmlrpc).
@@ -81,7 +82,8 @@ start_link(Name, URL, ClientOptions, HTTPOptions) ->
 stop(ServerRef) ->
   gen_server:cast(ServerRef, stop).
 
-%% @spec call(server_ref(), name(), [value()]) -> value()
+%% @spec call(server_ref(), name(), [value()]) -> value() | fault() | error()
+%%       where error() = {error, term()}
 %% @doc Call a remote procedure.
 call(ServerRef, Method, Params) ->
   gen_server:call(ServerRef, {call, Method, Params}, infinity).

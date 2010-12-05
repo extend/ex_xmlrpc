@@ -48,12 +48,14 @@ call_to_binary(Method, Params) ->
                    ParamsList,
                    <<"</methodCall>">>]).
 
-%% @spec response_to_value(#xmlElement{}) -> ex_xmlrpc:value()
+%% @spec response_to_value(#xmlElement{}) -> result()
+%%       where result() = ex_xmlrpc:value() | ex_xmlrpc:fault()
+%%                      | {error, {bad_fault, ex_xmlrpc:struct()}}
 response_to_value(Response) ->
-  Params = get_child_element(Response),
-  Param = get_child_element(Params),
-  Value = get_child_element(Param),
-  element_to_value(Value).
+  Child = #xmlElement{name = Name} = get_child_element(Response),
+  case Name of
+    params -> params_to_value(Child);
+    fault -> fault_to_tuple(Child) end.
 
 %% @spec get_child_element(Element::#xmlElement{}) -> #xmlElement{}
 get_child_element(#xmlElement{content = Content}) ->
@@ -140,6 +142,22 @@ member_to_iolist({Name, Value}) ->
    value_to_iolist(Value),
    <<"</member>">>].
 
+%% @spec params_to_value(#xmlElement{}) -> ex_xmlrpc:value()
+params_to_value(Params) ->
+  Param = get_child_element(Params),
+  Value = get_child_element(Param),
+  element_to_value(Value).
+
+%% @spec fault_to_tuple(#xmlElement{}) -> ex_xmlrpc:fault() |
+%%                                        {error, {bad_fault, xmlrpc:struct()}}
+fault_to_tuple(Fault) ->
+  Struct = get_child_element(Fault),
+  case struct_to_value(Struct) of
+    [{<<"faultCode">>, Code},
+     {<<"faultString">>, String}] when is_integer(Code), is_binary(String) ->
+      {fault, Code, String};
+    StructValue -> {error, {bad_fault, StructValue}} end.
+
 %% @spec element_to_value(Element::#xmlElement{}) -> ex_xmlrpc:value()
 element_to_value(#xmlElement{content = [#xmlText{value = Value}]}) ->
   list_to_binary(Value);
@@ -155,11 +173,8 @@ typed_element_to_value(#xmlElement{name = Name,
 typed_element_to_value(Element = #xmlElement{name = array}) ->
   #xmlElement{content = Content} = get_child_element(Element),
   [ element_to_value(Child) || Child = #xmlElement{} <- Content ];
-typed_element_to_value(#xmlElement{name = struct, content = Content}) ->
-  Members = [ Member || Member = #xmlElement{} <- Content],
-  case Members of
-    [] -> [{}];
-    _ -> lists:map(fun member_to_pair/1, Members) end.
+typed_element_to_value(Element = #xmlElement{name = struct}) ->
+  struct_to_value(Element).
 
 %% @spec text_to_value(Type::text_type(), string()) -> ex_xmlrpc:value()
 %%       where text_type() = i4 | int | boolean | double | string | base64
@@ -177,6 +192,13 @@ text_to_value(dateTime.iso8601, Text) ->
   ex_iso8601:list_to_datetime(Text);
 text_to_value(base64, Text) ->
   base64:decode(Text).
+
+%% @spec struct_to_value(#xmlElement{}) -> ex_xmlrpc:struct()
+struct_to_value(#xmlElement{content = Content}) ->
+  Members = [ Member || Member = #xmlElement{} <- Content],
+  case Members of
+    [] -> [{}];
+    _ -> lists:map(fun member_to_pair/1, Members) end.
 
 %% @spec member_to_pair(Member::#xmlElement{}) -> {binary(), ex_xmlrpc:value()}
 member_to_pair(#xmlElement{content = Content}) ->
